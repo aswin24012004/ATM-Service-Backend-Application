@@ -1,8 +1,0 @@
-controller\RegisterServletTest.class
-model\UserTest.class
-controller\LoginServletTest.class
-security\CryptoUtilTest.class
-security\PasswordUtilTest.class
-db\DBConnectionTest.class
-dao\UserDAOTest.class
-security\TokenUtilTest.class
