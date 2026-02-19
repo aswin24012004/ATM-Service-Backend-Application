@@ -1,0 +1,42 @@
+# Maven build output
+/target/
+/build/
+
+# Logs
+*.log
+logs/
+
+# IDE files
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tomcat / Jetty
+*.war
+*.ear
+*.zip
+
+# Java
+*.class
+
+# Environment / Config
+.env
+*.properties
+*.yml
+*.yaml
+
+# JWT / Secrets
+secret.key
