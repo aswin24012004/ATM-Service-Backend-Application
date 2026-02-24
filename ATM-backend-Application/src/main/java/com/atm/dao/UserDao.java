@@ -24,6 +24,13 @@ public class UserDao {
     			  return null;
     	}
     }
+    public String getEmail(String username) { 
+    	try { 
+    		return jdbc.queryForObject( "SELECT email FROM users WHERE username=?", new Object[]{username}, String.class ); 
+    		} catch (Exception e) {
+    			  return null;
+    	}
+    }
     
     public void updateBalance(String username, double balance) {
         jdbc.update("UPDATE users SET balance=? WHERE username=?", balance, username);
@@ -39,7 +46,7 @@ public class UserDao {
             User user = new User();
             user.setId(rs.getInt("id"));
             user.setUsername(rs.getString("username"));
-            user.setPasswordHash(rs.getString("pin_hash"));
+            user.setPinHash(rs.getString("pin_hash"));
             user.setRole(rs.getString("role"));
             user.setBalance(rs.getDouble("balance"));
             return user;

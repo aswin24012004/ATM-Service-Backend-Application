@@ -25,21 +25,20 @@ public class AuthFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) response;
         
         String path = req.getRequestURI();
-        
-        // Allow login endpoint without authentication 
+        // the authendication is not need for the login url
         if (path.endsWith("/api/login")) { 
         	chain.doFilter(request, response); 
         	return; 
         	}
 
-        // Check HttpSession 
+        // Check the HttpSession 
         HttpSession session = req.getSession(false);
         if (session != null && session.getAttribute("username") != null) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Check JWT
+        // Check the JWT
         String authHeader = req.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);

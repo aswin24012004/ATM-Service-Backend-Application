@@ -12,9 +12,15 @@ import com.atm.util.DBUtil;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import com.google.gson.Gson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @WebServlet("/api/transactions")
 public class TransactionServlet extends HttpServlet {
+
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(TransactionServlet.class);
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         // Validate JWT
@@ -22,6 +28,7 @@ public class TransactionServlet extends HttpServlet {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Missing or invalid Authorization header\"}");
+            logger.warn("Transaction fetch denied: missing/invalid auth header");
             return;
         }
 
@@ -29,6 +36,7 @@ public class TransactionServlet extends HttpServlet {
         if (!TokenUtil.validateToken(token)) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Invalid token\"}");
+            logger.warn("Transaction fetch denied: invalid token");
             return;
         }
 
@@ -39,14 +47,14 @@ public class TransactionServlet extends HttpServlet {
         JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
         List<Map<String, Object>> transactions;
 
-        // Admin sees all transactions
         if ("ADMIN".equals(role)) {
             transactions = jdbc.queryForList("SELECT * FROM transactions ORDER BY timestamp DESC");
+            logger.info("Admin retrieved all transactions");
         } else {
-       // 	User sees only their own
             transactions = jdbc.queryForList(
                 "SELECT * FROM transactions WHERE username=? ORDER BY timestamp DESC", username
             );
+            logger.info("User {} retrieved their transactions", username);
         }
 
         res.setContentType("application/json");

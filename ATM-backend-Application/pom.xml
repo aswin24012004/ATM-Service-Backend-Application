@@ -20,10 +20,11 @@
 
         <!-- MySQL Connector -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-        </dependency>
+		  <groupId>mysql</groupId>
+		  <artifactId>mysql-connector-java</artifactId>
+		  <version>8.0.33</version> <!-- use the latest stable version -->
+		</dependency>
+
 
         <!-- Spring JDBC for JdbcTemplate -->
         <dependency>
@@ -81,6 +82,46 @@
 		    <groupId>org.slf4j</groupId>
 		    <artifactId>slf4j-simple</artifactId>
 		    <version>2.0.12</version>
+		</dependency>
+		<!-- Email Service-->		
+		<dependency>
+		  <groupId>org.springframework.boot</groupId>
+		  <artifactId>spring-boot-starter-mail</artifactId>
+		  <version>3.2.0</version>
+		</dependency>
+		<!--Email template-->
+		<dependency>
+		  <groupId>org.springframework.boot</groupId>
+		  <artifactId>spring-boot-starter-thymeleaf</artifactId>
+		  <version>3.2.0</version>
+		</dependency>
+		<!--Logging-->
+		<dependency>
+		    <groupId>org.slf4j</groupId>
+		    <artifactId>slf4j-api</artifactId>
+		    <version>2.0.12</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.slf4j</groupId>
+		    <artifactId>slf4j-simple</artifactId>
+		    <version>2.0.12</version>
+		</dependency>
+		<!--Documentation in Swagger api-->
+		<dependency>
+		    <groupId>io.swagger.core.v3</groupId>
+		    <artifactId>swagger-jaxrs2</artifactId>
+		    <version>2.2.20</version>
+		</dependency>
+		<dependency>
+		    <groupId>io.swagger.core.v3</groupId>
+		    <artifactId>swagger-annotations</artifactId>
+		    <version>2.2.20</version>
+		</dependency>
+		<dependency>
+		    <groupId>io.swagger.core.v3</groupId>
+		    <artifactId>swagger-integration</artifactId>
+		    <version>2.2.20</version>
 		</dependency>
 
 

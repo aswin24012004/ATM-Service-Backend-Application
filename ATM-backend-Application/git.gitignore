@@ -1,42 +1,47 @@
-# Maven build output
-/target/
-/build/
+# Maven build
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
 
-# Logs
-*.log
-logs/
+# Gradle (if used)
+.gradle/
+build/
 
 # IDE files
-# IntelliJ
-.idea/
 *.iml
-out/
-
-# Eclipse
-.classpath
-.project
-.settings/
-
-# VS Code
+.idea/
+*.ipr
+*.iws
 .vscode/
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Tomcat / Jetty
-*.war
-*.ear
-*.zip
+# Logs
+logs/
+*.log
 
-# Java
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Java compiled files
 *.class
 
-# Environment / Config
-.env
-*.properties
-*.yml
-*.yaml
+# Package archives
+*.jar
+*.war
+*.ear
 
-# JWT / Secrets
-secret.key
+# Node (if Swagger UI or frontend is included)
+node_modules/
+dist/
+
+# Configuration (keep a template instead of real secrets)
+application.properties
+application-local.properties
