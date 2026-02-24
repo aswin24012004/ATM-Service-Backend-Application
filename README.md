@@ -126,7 +126,5 @@ You can test all endpoints using the provided **Postman Collection**:
 
 ## 👨‍💻 Author
 Developed by **Aswin C**  
-ATM Management System Project (Java Servlets + MySQL + JWT + Swagger)
-```
+ATM Management System Project (Java Servlets + MySQL + JWT )
 
----
