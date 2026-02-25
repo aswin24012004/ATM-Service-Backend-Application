@@ -38,9 +38,6 @@ logs/
 *.war
 *.ear
 
-# Node (if Swagger UI or frontend is included)
-node_modules/
-dist/
 
 # Configuration (keep a template instead of real secrets)
 application.properties
