@@ -1,4 +1,3 @@
-Here’s a polished **README.md** you can drop into your project root. It documents your ATM Management System, its features, configuration, and API endpoints — making it presentation‑ready and easy to share.
 
 ---
 
