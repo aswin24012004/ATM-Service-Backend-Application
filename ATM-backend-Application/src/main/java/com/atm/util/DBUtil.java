@@ -1,11 +1,14 @@
 package com.atm.util;
 
-import org.springframework.jdbc.core.JdbcTemplate;
+import java.sql.Connection;
+import java.sql.SQLException;
+import javax.sql.DataSource;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 public class DBUtil {
-    private static JdbcTemplate jdbcTemplate;
+    private static HikariDataSource dataSource;
 
     static {
         try {
@@ -32,22 +35,28 @@ public class DBUtil {
                 throw new RuntimeException("Invalid value for db.pool.minIdle: " + minIdleStr, e);
             }
 
-            // Initialize datasource and JdbcTemplate
-            HikariDataSource dataSource = new HikariDataSource(config);
-            jdbcTemplate = new JdbcTemplate(dataSource);
+            // initialize hikari datasource
+            dataSource = new HikariDataSource(config);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize DBUtil", e);
         }
     }
 
-    public static JdbcTemplate getJdbcTemplate() {
-        return jdbcTemplate;
+    public static Connection getConnection() throws SQLException {
+        if (dataSource == null) {
+            throw new SQLException("DataSource not initialized");
+        }
+        return dataSource.getConnection();
+    }
+
+    public static DataSource getDataSource() {
+        return dataSource;
     }
 
     public static void shutdown() {
-        if (jdbcTemplate != null) {
-            ((HikariDataSource) jdbcTemplate.getDataSource()).close();
+        if (dataSource != null) {
+            dataSource.close();
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.atm.controller;
 
-import com.atm.util.DBUtil;
+import com.atm.dao.UserDao;
+import com.atm.dao.TransactionDao;
+import com.atm.dao.ATMDao;
 import com.atm.util.TokenUtil;
 import com.atm.service.EmailService;
 import io.jsonwebtoken.Claims;
@@ -65,16 +67,13 @@ class AdminServletTest {
         Claims claims = mock(Claims.class);
         when(claims.get("role")).thenReturn("ADMIN");
 
-        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class);
-             MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
+        UserDao userDao = mock(UserDao.class);
+        when(userDao.getAllUsers()).thenReturn(Collections.emptyList());
 
+        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
             tokenMock.when(() -> TokenUtil.getClaims("adminToken")).thenReturn(claims);
 
-            var jdbcTemplate = mock(org.springframework.jdbc.core.JdbcTemplate.class);
-            dbMock.when(DBUtil::getJdbcTemplate).thenReturn(jdbcTemplate);
-
-            when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
-
+            servlet = new AdminServlet() { { this.userDao = userDao; } };
             servlet.doGet(request, response);
 
             String output = responseWriter.toString();

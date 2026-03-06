@@ -5,11 +5,10 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import com.atm.util.DBUtil;
 import com.atm.util.TokenUtil;
 import com.atm.service.EmailService;
+import com.atm.dao.UserDao;
 import io.jsonwebtoken.Claims;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +16,7 @@ import org.slf4j.LoggerFactory;
 public class DepositServlet extends HttpServlet {
 
     private static final Logger logger = LoggerFactory.getLogger(DepositServlet.class);
+    protected UserDao userDao = new UserDao();
     private final EmailService emailService = new EmailService();
 
     @Override
@@ -42,20 +42,13 @@ public class DepositServlet extends HttpServlet {
         String username = claims.getSubject();
         double amount = Double.parseDouble(req.getParameter("amount"));
 
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
-
-        // Update user balance
-        jdbc.update("UPDATE users SET balance = balance + ? WHERE username=?", amount, username);
-
-        // Log transaction
-        jdbc.update("INSERT INTO transactions(username, type, amount) VALUES(?, ?, ?)", username, "deposit", amount);
+        // Update user balance and log transaction using injected dao
+        double oldBal = this.userDao.getBalance(username);
+        userDao.updateBalance(username, oldBal + amount);
+        userDao.logTransaction(username, "deposit", amount);
 
         // Get updated balance
-        Double newBalance = jdbc.queryForObject(
-            "SELECT balance FROM users WHERE username=?",
-            new Object[]{username},
-            Double.class
-        );
+        Double newBalance = userDao.getBalance(username);
 
         res.setContentType("application/json");
         PrintWriter out = res.getWriter();
@@ -64,11 +57,7 @@ public class DepositServlet extends HttpServlet {
 
         // Send transaction email
         try {
-            String email = jdbc.queryForObject(
-                "SELECT email FROM users WHERE username=?",
-                new Object[]{username},
-                String.class
-            );
+            String email = userDao.getEmail(username);
             emailService.sendEmail(email, "Deposit Alert",
                 "Dear " + username + ",\nYou deposited Rs." + amount +
                 ". Current balance: Rs." + newBalance);

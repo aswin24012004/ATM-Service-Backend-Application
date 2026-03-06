@@ -1,12 +1,14 @@
 package com.atm.dao;
 
 import com.atm.model.Transaction;
+import com.atm.util.DBUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.mockito.MockedStatic;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
@@ -17,62 +19,69 @@ import static org.mockito.Mockito.*;
 
 class TransactionDaoTest {
 
-    private JdbcTemplate jdbcTemplate;
     private TransactionDao transactionDao;
+    private Connection conn;
+    private PreparedStatement ps;
+    private ResultSet rs;
 
     @BeforeEach
-    void setUp() {
-        jdbcTemplate = mock(JdbcTemplate.class);
-        // Override the jdbcTemplate inside TransactionDao with our mock
-        transactionDao = new TransactionDao() {
-            { this.jdbcTemplate = jdbcTemplate; }
-        };
+    void setUp() throws Exception {
+        transactionDao = new TransactionDao();
+        conn = mock(Connection.class);
+        ps = mock(PreparedStatement.class);
+        rs = mock(ResultSet.class);
     }
 
     @Test
-    void testSaveTransaction() {
+    void testSaveTransaction() throws Exception {
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
         Transaction tx = new Transaction();
-        tx.setId(1);
+        tx.setUsername("alice");
         tx.setType("DEPOSIT");
         tx.setAmount(1000.0);
         tx.setTimestamp(new Timestamp(System.currentTimeMillis()));
 
-        transactionDao.save(tx);
-
-        verify(jdbcTemplate, times(1)).update(
-                eq("INSERT INTO transactions(user_id,type,amount,timestamp) VALUES(?,?,?,?)"),
-                eq(tx.getId()), eq(tx.getType()), eq(tx.getAmount()), eq(tx.getTimestamp())
-        );
+        try (MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
+            dbMock.when(DBUtil::getConnection).thenReturn(conn);
+            transactionDao.save(tx);
+            verify(ps, times(1)).setString(1, "alice");
+            verify(ps, times(1)).setString(2, "DEPOSIT");
+            verify(ps, times(1)).setDouble(3, 1000.0);
+            verify(ps, times(1)).setTimestamp(eq(4), any(Timestamp.class));
+            verify(ps, times(1)).executeUpdate();
+        }
     }
 
-    @SuppressWarnings("unchecked")
-	@Test
-    void testFindByUser() {
-        Transaction tx1 = new Transaction();
-        tx1.setId(1);
-        tx1.setType("DEPOSIT");
-        tx1.setAmount(500.0);
-        tx1.setTimestamp(new Timestamp(System.currentTimeMillis()));
+    @Test
+    void testFindByUsername() throws Exception {
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true, false);
+        when(rs.getInt("id")).thenReturn(1, 2);
+        when(rs.getString("username")).thenReturn("alice", "alice");
+        when(rs.getString("type")).thenReturn("DEPOSIT", "WITHDRAW");
+        when(rs.getDouble("amount")).thenReturn(500.0, 200.0);
+        when(rs.getTimestamp("timestamp")).thenReturn(new Timestamp(System.currentTimeMillis()));
 
-        Transaction tx2 = new Transaction();
-        tx2.setId(1);
-        tx2.setType("WITHDRAW");
-        tx2.setAmount(200.0);
-        tx2.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        try (MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
+            dbMock.when(DBUtil::getConnection).thenReturn(conn);
+            List<Transaction> result = transactionDao.findByUsername("alice");
+            assertEquals(2, result.size());
+            assertEquals("DEPOSIT", result.get(0).getType());
+            assertEquals("WITHDRAW", result.get(1).getType());
+        }
+    }
 
-        List<Transaction> mockResult = Arrays.asList(tx1, tx2);
+    @Test
+    void testFindAll() throws Exception {
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
 
-        when(jdbcTemplate.query(anyString(), any(BeanPropertyRowMapper.class), eq(1)))
-                .thenReturn(mockResult);
-
-        List<Transaction> result = transactionDao.findByUser(1);
-
-        assertEquals(2, result.size());
-        assertEquals("DEPOSIT", result.get(0).getType());
-        assertEquals("WITHDRAW", result.get(1).getType());
-
-        verify(jdbcTemplate, times(1))
-                .query(eq("SELECT * FROM transactions WHERE user_id=?"),
-                       any(BeanPropertyRowMapper.class), eq(1));
+        try (MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
+            dbMock.when(DBUtil::getConnection).thenReturn(conn);
+            List<Transaction> result = transactionDao.findAll();
+            assertEquals(0, result.size());
+        }
     }
 }

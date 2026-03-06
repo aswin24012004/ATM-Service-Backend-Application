@@ -2,38 +2,62 @@ package com.atm.dao;
 
 import com.atm.model.ATM;
 import com.atm.util.DBUtil;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ATMDao {
-    private JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
-
     
-	public ATM getATMById(int id) {
-        return jdbc.queryForObject("SELECT * FROM atm WHERE id=?", new Object[]{id}, new ATMRowMapper());
+    public ATM getATMById(int id) {
+        String sql = "SELECT * FROM atm WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    ATM atm = new ATM();
+                    atm.setId(rs.getInt("id"));
+                    atm.setTotalBalance(rs.getDouble("total_balance"));
+                    return atm;
+                }
+            }
+        } catch (SQLException e) {
+        }
+        return null;
     }
 
     public void updateBalance(int id, double newBalance) {
-        jdbc.update("UPDATE atm SET total_balance=? WHERE id=?", newBalance, id);
+        String sql = "UPDATE atm SET total_balance=? WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, newBalance);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+        }
     }
 
     public void addFunds(int id, double amount) {
-        jdbc.update("UPDATE atm SET total_balance = total_balance + ? WHERE id=?", amount, id);
+        String sql = "UPDATE atm SET total_balance = total_balance + ? WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+        }
     }
 
     public void checkBalance(int id, double amount) {
-        jdbc.update("UPDATE atm SET total_balance = total_balance - ? WHERE id=?", amount, id);
-    }
-
-    private static class ATMRowMapper implements RowMapper<ATM> {
-        public ATM mapRow(ResultSet rs, int rowNum) throws SQLException {
-            ATM atm = new ATM();
-            atm.setId(rs.getInt("id"));
-            atm.setTotalBalance(rs.getDouble("total_balance"));
-            return atm;
+        String sql = "UPDATE atm SET total_balance = total_balance - ? WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
         }
     }
 }

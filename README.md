@@ -30,7 +30,6 @@ A **Java Servlet-based ATM Management System** with JWT authentication, role-bas
 
 ## 🛠️ Tech Stack
 - **Java Servlets (Jakarta EE)**
-- **Spring JDBC (JdbcTemplate)**
 - **MySQL Database**
 - **JWT (io.jsonwebtoken)**
 - **SLF4J Logging**

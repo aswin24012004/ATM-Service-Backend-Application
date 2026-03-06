@@ -7,8 +7,7 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import com.atm.util.DBUtil;
+import com.atm.dao.TransactionDao;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import com.google.gson.Gson;
@@ -20,6 +19,7 @@ public class TransactionServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(TransactionServlet.class);
+	protected TransactionDao txDao = new TransactionDao();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
@@ -44,16 +44,13 @@ public class TransactionServlet extends HttpServlet {
         String username = claims.getSubject();
         String role = (String) claims.get("role");
 
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
-        List<Map<String, Object>> transactions;
+        List<?> transactions;
 
         if ("ADMIN".equals(role)) {
-            transactions = jdbc.queryForList("SELECT * FROM transactions ORDER BY timestamp DESC");
+            transactions = txDao.findAll();
             logger.info("Admin retrieved all transactions");
         } else {
-            transactions = jdbc.queryForList(
-                "SELECT * FROM transactions WHERE username=? ORDER BY timestamp DESC", username
-            );
+            transactions = txDao.findByUsername(username);
             logger.info("User {} retrieved their transactions", username);
         }
 

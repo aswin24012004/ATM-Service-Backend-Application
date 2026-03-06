@@ -1,6 +1,6 @@
 package com.atm.controller;
 
-import com.atm.util.DBUtil;
+import com.atm.dao.TransactionDao;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -65,16 +64,14 @@ class TransactionServletTest {
         when(claims.getSubject()).thenReturn("admin");
         when(claims.get("role")).thenReturn("ADMIN");
 
-        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
+        TransactionDao txDao = mock(TransactionDao.class);
+        when(txDao.findAll()).thenReturn(Collections.emptyList());
 
-        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class);
-             MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
-
+        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
             tokenMock.when(() -> TokenUtil.validateToken("goodToken")).thenReturn(true);
             tokenMock.when(() -> TokenUtil.getClaims("goodToken")).thenReturn(claims);
-            dbMock.when(DBUtil::getJdbcTemplate).thenReturn(jdbcTemplate);
 
+            servlet = new TransactionServlet() { { this.txDao = txDao; } };
             servlet.doGet(request, response);
 
             String output = responseWriter.toString();
@@ -90,16 +87,14 @@ class TransactionServletTest {
         when(claims.getSubject()).thenReturn("alice");
         when(claims.get("role")).thenReturn("CUSTOMER");
 
-        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        when(jdbcTemplate.queryForList(anyString(), eq("alice"))).thenReturn(Collections.emptyList());
+        TransactionDao txDao = mock(TransactionDao.class);
+        when(txDao.findByUsername("alice")).thenReturn(Collections.emptyList());
 
-        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class);
-             MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
-
+        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
             tokenMock.when(() -> TokenUtil.validateToken("userToken")).thenReturn(true);
             tokenMock.when(() -> TokenUtil.getClaims("userToken")).thenReturn(claims);
-            dbMock.when(DBUtil::getJdbcTemplate).thenReturn(jdbcTemplate);
 
+            servlet = new TransactionServlet() { { this.txDao = txDao; } };
             servlet.doGet(request, response);
 
             String output = responseWriter.toString();

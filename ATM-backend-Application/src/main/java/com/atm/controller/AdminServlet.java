@@ -10,14 +10,15 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.atm.util.DBUtil;
 import com.atm.util.HashUtil;
 import com.atm.util.TokenUtil;
 import com.atm.service.RegexService;
 import com.atm.service.EmailService;
+import com.atm.dao.UserDao;
+import com.atm.dao.TransactionDao;
+import com.atm.dao.ATMDao;
 
 import io.jsonwebtoken.Claims;
-import org.springframework.jdbc.core.JdbcTemplate;
 import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,9 @@ public class AdminServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(AdminServlet.class);
+    protected UserDao userDao = new UserDao();
+    protected TransactionDao txDao = new TransactionDao();
+    protected ATMDao atmDao = new ATMDao();
     private final EmailService emailService = new EmailService();
 
     @Override
@@ -46,22 +50,19 @@ public class AdminServlet extends HttpServlet {
         }
 
         String path = req.getParameter("path");
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
 
         if ("users".equals(path)) {
-            List<Map<String, Object>> users = jdbc.queryForList("SELECT id, username, role, balance, phone_number, email FROM users");
-            out.println(new Gson().toJson(users));
+            out.println(new Gson().toJson(userDao.getAllUsers()));
             logger.info("Admin retrieved user list");
 
         } else if ("transactions".equals(path)) {
-            List<Map<String, Object>> txns = jdbc.queryForList("SELECT * FROM transactions ORDER BY timestamp DESC");
-            out.println(new Gson().toJson(txns));
+            out.println(new Gson().toJson(txDao.findAll()));
             logger.info("Admin retrieved transaction list");
 
         } else if ("atm".equals(path)) {
-            Map<String, Object> atm = jdbc.queryForMap("SELECT balance FROM atm WHERE id=1");
-            double atmBalance = (double) atm.get("balance");
-            out.println(new Gson().toJson(atm));
+            com.atm.model.ATM atmModel = atmDao.getATMById(1);
+            double atmBalance = atmModel != null ? atmModel.getTotalBalance() : 0.0;
+            out.println(new Gson().toJson(atmModel));
 
             if (atmBalance < 5000) {
                 logger.warn("ATM balance low: {}", atmBalance);
@@ -82,7 +83,6 @@ public class AdminServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String path = req.getParameter("path");
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
         res.setContentType("application/json");
         PrintWriter out = res.getWriter();
 
@@ -112,17 +112,17 @@ public class AdminServlet extends HttpServlet {
                 String normalizedPhone = RegexService.normalizePhone(phone);
                 String hashedPin = HashUtil.hashPassword(pin);
 
-                jdbc.update(
-                    "INSERT INTO users(username, pin_hash, role, balance, phone_number, email) VALUES(?, ?, ?, ?, ?, ?)",
-                    username, hashedPin, userRole.toUpperCase(), 0.0, normalizedPhone, email
-                );
+                boolean ok = userDao.createUser(username, hashedPin, userRole.toUpperCase(), 0.0, normalizedPhone, email);
+                if (ok) {
+                    out.println("{\"status\":\"success\",\"message\":\"User created successfully\"}");
+                    logger.info("User created successfully: username={}", username);
 
-                out.println("{\"status\":\"success\",\"message\":\"User created successfully\"}");
-                logger.info("User created successfully: username={}", username);
-
-                // Sending the  Welcome Email
-                emailService.sendEmail(email, "Welcome to ATM System",
-                    "Dear " + username + ",\nYour account has been created successfully.\nRole: " + userRole);
+                    // Sending the  Welcome Email
+                    emailService.sendEmail(email, "Welcome to ATM System",
+                        "Dear " + username + ",\nYour account has been created successfully.\nRole: " + userRole);
+                } else {
+                    throw new Exception("user creation failed");
+                }
 
             } catch (Exception e) {
                 logger.error("Error creating user: {}", username, e);

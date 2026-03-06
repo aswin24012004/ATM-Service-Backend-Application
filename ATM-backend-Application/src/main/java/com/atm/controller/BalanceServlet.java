@@ -4,8 +4,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import com.atm.util.DBUtil;
+import com.atm.dao.UserDao;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
@@ -30,12 +29,8 @@ public class BalanceServlet extends HttpServlet {
             username = claims.getSubject();
         }
 
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
-        Double balance = jdbc.queryForObject(
-            "SELECT balance FROM users WHERE username=?",
-            new Object[]{username},
-            Double.class
-        );
+        UserDao userDao = new UserDao();
+        Double balance = userDao.getBalance(username);
 
         res.setContentType("application/json");
         res.getWriter().println("{\"username\":\"" + username + "\", \"balance\":" + balance + "}");

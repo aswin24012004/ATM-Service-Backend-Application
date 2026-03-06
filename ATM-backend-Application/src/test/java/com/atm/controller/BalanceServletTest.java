@@ -1,6 +1,6 @@
 package com.atm.controller;
 
-import com.atm.util.DBUtil;
+import com.atm.dao.UserDao;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -39,19 +38,15 @@ class BalanceServletTest {
         when(session.getAttribute("username")).thenReturn("alice");
         when(request.getSession(false)).thenReturn(session);
 
-        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Double.class)))
-                .thenReturn(1000.0);
+        UserDao userDao = mock(UserDao.class);
+        when(userDao.getBalance("alice")).thenReturn(1000.0);
 
-        try (MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
-            dbMock.when(DBUtil::getJdbcTemplate).thenReturn(jdbcTemplate);
+        servlet = new BalanceServlet() { { this.userDao = userDao; } };
+        servlet.doGet(request, response);
 
-            servlet.doGet(request, response);
-
-            String output = responseWriter.toString();
-            assertTrue(output.contains("\"username\":\"alice\""));
-            assertTrue(output.contains("\"balance\":1000.0"));
-        }
+        String output = responseWriter.toString();
+        assertTrue(output.contains("\"username\":\"alice\""));
+        assertTrue(output.contains("\"balance\":1000.0"));
     }
 
     @Test
@@ -62,16 +57,13 @@ class BalanceServletTest {
         Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("bob");
 
-        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Double.class)))
-                .thenReturn(500.0);
+        UserDao userDao = mock(UserDao.class);
+        when(userDao.getBalance("bob")).thenReturn(500.0);
 
-        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class);
-             MockedStatic<DBUtil> dbMock = mockStatic(DBUtil.class)) {
-
+        try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
             tokenMock.when(() -> TokenUtil.getClaims("goodToken")).thenReturn(claims);
-            dbMock.when(DBUtil::getJdbcTemplate).thenReturn(jdbcTemplate);
 
+            servlet = new BalanceServlet() { { this.userDao = userDao; } };
             servlet.doGet(request, response);
 
             String output = responseWriter.toString();
