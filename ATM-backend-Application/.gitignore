@@ -1,1 +1,17 @@
 /target/
+/.settings/
+.classpath
+.project
+.idea/
+*.iml
+*.log
+*.jar
+*.war
+*.ear
+*.db
+*.sql
+*.sqlite
+*.bak
+*.tmp
+*.swp
+.DS_Store       
