@@ -26,7 +26,7 @@ public class RegexService {
         return digitsOnly;
     }
 
-    // Validate email
+    // Validate the email
     public static boolean isValidEmail(String email) {
         return email != null && EMAIL_PATTERN.matcher(email).matches();
     }

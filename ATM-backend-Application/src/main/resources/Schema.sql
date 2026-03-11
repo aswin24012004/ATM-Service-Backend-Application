@@ -6,7 +6,9 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     pin_hash VARCHAR(255) NOT NULL,   
     role VARCHAR(20) NOT NULL,        -- USER / ADMIN
-    balance DOUBLE DEFAULT 0.0
+    balance DOUBLE DEFAULT 0.0,
+    phone_number VARCHAR(10),
+    email VarCHAR(50)
 );
 
 CREATE TABLE transactions (

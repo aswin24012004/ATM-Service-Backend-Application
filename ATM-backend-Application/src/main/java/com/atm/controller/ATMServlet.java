@@ -17,12 +17,25 @@ import org.slf4j.LoggerFactory;
 
 @WebServlet("/api/atm")
 public class ATMServlet extends HttpServlet {
-    private static final Logger logger = LoggerFactory.getLogger(ATMServlet.class);
-    private final ATMDao atmDao = new ATMDao();
-    private final EmailService emailService = new EmailService();
 
+	
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(ATMServlet.class);
+    protected ATMDao atmDao;
+    private final EmailService emailService;
+
+    public ATMServlet() {
+        this(new ATMDao(), new EmailService());
+    }
+
+    // Constructor for testing
+    public ATMServlet(ATMDao atmDao, EmailService emailService) {
+        this.atmDao = atmDao;
+        this.emailService = emailService;
+    }
+    
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -71,7 +84,7 @@ public class ATMServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -100,7 +113,7 @@ public class ATMServlet extends HttpServlet {
         }
 
         double amount = Double.parseDouble(req.getParameter("amount"));
-        atmDao.addFunds(1, amount);
+        atmDao.addAmount(1, amount);
 
         ATM atm = atmDao.getATMById(1);
         out.println("{\"status\":\"success\",\"newAtmBalance\":" + atm.getTotalBalance() + "}");

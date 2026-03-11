@@ -19,11 +19,22 @@ public class LoginServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(LoginServlet.class);
-    private final AuthService authService = new AuthService();
-    private final EmailService emailService = new EmailService();
+//    private AuthService authService = new AuthService();
+//    private EmailService emailService = new EmailService();
+    
+    protected AuthService authService;
+    protected EmailService emailService;
 
+    public LoginServlet() {
+        this(new AuthService(), new EmailService());
+    }
+
+    public LoginServlet(AuthService authService, EmailService emailService) {
+        this.authService = authService;
+        this.emailService = emailService;
+    }   
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String username = req.getParameter("username");
         String pin = req.getParameter("pin");
 
@@ -38,15 +49,15 @@ public class LoginServlet extends HttpServlet {
             // Create HttpSession
             HttpSession session = req.getSession(true);
             session.setAttribute("username", username);
-            session.setAttribute("role", authService.getRole(username));
+            session.setAttribute("role", getAuthService().getRole(username));
 
             out.println("{\"status\":\"success\",\"token\":\"" + token + "\"}");
             logger.info("Login successful: username={}", username);
 
             // Send welcome email
             try {
-                String email = authService.getEmail(username); //
-                emailService.sendEmail(email, "Welcome Back to ATM System",
+                String email = getAuthService().getEmail(username); //
+                getEmailService().sendEmail(email, "Welcome Back to ATM System",
                     "Dear " + username + ",\nYou have successfully logged in to your ATM account.");
             } catch (Exception e) {
                 logger.error("Failed to send login email to user={}", username, e);
@@ -60,9 +71,25 @@ public class LoginServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         res.setContentType("application/json");
         res.getWriter().println("{\"status\":\"success\",\"token\":\"test-token\"}");
         logger.debug("LoginServlet GET called for test token");
     }
+
+	public AuthService getAuthService() {
+		return authService;
+	}
+
+	public void setAuthService(AuthService authService) {
+		this.authService = authService;
+	}
+
+	public EmailService getEmailService() {
+		return emailService;
+	}
+
+	public void setEmailService(EmailService emailService) {
+		this.emailService = emailService;
+	}
 }

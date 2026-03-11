@@ -4,23 +4,35 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 import com.atm.util.DBUtil;
 import com.atm.util.TokenUtil;
 import com.atm.service.EmailService;
 import io.jsonwebtoken.Claims;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @WebServlet("/api/deposit")
 public class DepositServlet extends HttpServlet {
 
-    private static final Logger logger = LoggerFactory.getLogger(DepositServlet.class);
-    private final EmailService emailService = new EmailService();
+    
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(DepositServlet.class);
+    protected EmailService emailService;
 
+    public DepositServlet() {
+        this(new EmailService());
+    }
+
+    // Constructor for testing
+    public DepositServlet(EmailService emailService) {
+        this.emailService = emailService;
+    }
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         // Validate JWT
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -42,38 +54,66 @@ public class DepositServlet extends HttpServlet {
         String username = claims.getSubject();
         double amount = Double.parseDouble(req.getParameter("amount"));
 
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
+        try (Connection conn = DBUtil.getConnection()) {
+            // Update user balance
+        	String updateQuery = "UPDATE users SET balance = balance + ? WHERE username=?";
+        	String insertQuery = "INSERT INTO transactions(username, type, amount) VALUES(?, ?, ?)";
+        	String readQuery = "SELECT balance FROM users WHERE username=?";
+            try (PreparedStatement ps = conn.prepareStatement(updateQuery)) {
+                ps.setDouble(1, amount);
+                ps.setString(2, username);
+                ps.executeUpdate();
+            }
 
-        // Update user balance
-        jdbc.update("UPDATE users SET balance = balance + ? WHERE username=?", amount, username);
+            // Log transaction
+            try (PreparedStatement ps = conn.prepareStatement(insertQuery)) {
+                ps.setString(1, username);
+                ps.setString(2, "deposit");
+                ps.setDouble(3, amount);
+                ps.executeUpdate();
+            }
 
-        // Log transaction
-        jdbc.update("INSERT INTO transactions(username, type, amount) VALUES(?, ?, ?)", username, "deposit", amount);
+            // Get updated balance
+            Double newBalance = null;
+            try (PreparedStatement ps = conn.prepareStatement(readQuery)) {
+                ps.setString(1, username);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        newBalance = rs.getDouble("balance");
+                    }
+                }
+            }
 
-        // Get updated balance
-        Double newBalance = jdbc.queryForObject(
-            "SELECT balance FROM users WHERE username=?",
-            new Object[]{username},
-            Double.class
-        );
+            res.setContentType("application/json");
+            PrintWriter out = res.getWriter();
+            if (newBalance != null) {
+                out.println("{\"status\":\"success\",\"newBalance\":" + newBalance + "}");
+                logger.info("Deposit successful: user={}, amount={}, newBalance={}", username, amount, newBalance);
 
-        res.setContentType("application/json");
-        PrintWriter out = res.getWriter();
-        out.println("{\"status\":\"success\",\"newBalance\":" + newBalance + "}");
-        logger.info("Deposit successful: user={}, amount={}, newBalance={}", username, amount, newBalance);
-
-        // Send transaction email
-        try {
-            String email = jdbc.queryForObject(
-                "SELECT email FROM users WHERE username=?",
-                new Object[]{username},
-                String.class
-            );
-            emailService.sendEmail(email, "Deposit Alert",
-                "Dear " + username + ",\nYou deposited Rs." + amount +
-                ". Current balance: Rs." + newBalance);
+                // Send transaction email
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT email FROM users WHERE username=?")) {
+                    ps.setString(1, username);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            String email = rs.getString("email");
+                            emailService.sendEmail(email, "Deposit Alert",
+                                    "Dear " + username + ",\nYou deposited Rs." + amount +
+                                            ". Current balance: Rs." + newBalance);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to send deposit email to user={}", username, e);
+                }
+            } else {
+                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                res.getWriter().println("{\"error\":\"User not found\"}");
+                logger.warn("Deposit failed: user={} not found", username);
+            }
         } catch (Exception e) {
-            logger.error("Failed to send deposit email to user={}", username, e);
+            logger.error("Error processing deposit for user={}", username, e);
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            res.getWriter().println("{\"error\":\"Server error during deposit\"}");
         }
     }
 }

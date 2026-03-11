@@ -7,7 +7,7 @@ public class ConfigUtil {
     private static Properties props = new Properties();
 
     static {
-        try (InputStream input = ConfigUtil.class.getClassLoader()
+        try (InputStream input = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream("application.properties")) {
             if (input == null) {
                 throw new RuntimeException("application.properties not found in classpath");
@@ -39,16 +39,16 @@ public class ConfigUtil {
         return value != null ? Boolean.parseBoolean(value) : defaultValue;
     }
     
-    public static void main(String[] args) {
-
-        try {
-            // 1. Test String 
-            String dbUrl = ConfigUtil.get("db.url");
-            System.out.println("Database URL: " + dbUrl);
-
-        } catch (Exception e) {
-            System.err.println("\nFAILURE: Could not load configuration!");
-            e.printStackTrace();
-        }
-    }
+//    public static void main(String[] args) {
+//
+//        try {
+//            // 1. Test String 
+//            String dbUrl = ConfigUtil.get("db.url");
+//            System.out.println("Database URL: " + dbUrl);
+//
+//        } catch (Exception e) {
+//            System.err.println("\nFAILURE: Could not load configuration!");
+//            e.printStackTrace();
+//        }
+//    }
 }

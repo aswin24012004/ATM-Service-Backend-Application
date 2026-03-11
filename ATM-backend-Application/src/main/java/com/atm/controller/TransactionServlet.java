@@ -4,10 +4,11 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import com.atm.util.DBUtil;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
@@ -18,11 +19,11 @@ import org.slf4j.LoggerFactory;
 @WebServlet("/api/transactions")
 public class TransactionServlet extends HttpServlet {
 
-	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(TransactionServlet.class);
+    private static final long serialVersionUID = 1L;
+    private static final Logger logger = LoggerFactory.getLogger(TransactionServlet.class);
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         // Validate JWT
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -44,17 +45,39 @@ public class TransactionServlet extends HttpServlet {
         String username = claims.getSubject();
         String role = (String) claims.get("role");
 
-        JdbcTemplate jdbc = DBUtil.getJdbcTemplate();
-        List<Map<String, Object>> transactions;
+        List<Map<String, Object>> transactions = new ArrayList<>();
 
-        if ("ADMIN".equals(role)) {
-            transactions = jdbc.queryForList("SELECT * FROM transactions ORDER BY timestamp DESC");
-            logger.info("Admin retrieved all transactions");
-        } else {
-            transactions = jdbc.queryForList(
-                "SELECT * FROM transactions WHERE username=? ORDER BY timestamp DESC", username
-            );
-            logger.info("User {} retrieved their transactions", username);
+        try (Connection conn = DBUtil.getConnection()) {
+            String sql;
+            if ("ADMIN".equals(role)) {
+                sql = "SELECT * FROM transactions ORDER BY timestamp DESC";
+                logger.info("Admin retrieved all transactions");
+            } else {
+                sql = "SELECT * FROM transactions WHERE username=? ORDER BY timestamp DESC";
+                logger.info("User {} retrieved their transactions", username);
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                if (!"ADMIN".equals(role)) {
+                    ps.setString(1, username);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> txn = new HashMap<>();
+                        txn.put("id", rs.getInt("id"));
+                        txn.put("username", rs.getString("username"));
+                        txn.put("type", rs.getString("type"));
+                        txn.put("amount", rs.getDouble("amount"));
+                        txn.put("timestamp", rs.getTimestamp("timestamp"));
+                        transactions.add(txn);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving transactions for user={}", username, e);
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            res.getWriter().println("{\"error\":\"Unable to retrieve transactions\"}");
+            return;
         }
 
         res.setContentType("application/json");

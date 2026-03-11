@@ -19,17 +19,24 @@ import org.slf4j.LoggerFactory;
 @WebServlet("/api/withdraw")
 public class WithdrawServlet extends HttpServlet {
 
-    /**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(WithdrawServlet.class);
-    private final UserDao userDao = new UserDao();
-    private final ATMDao atmDao = new ATMDao();
-    private final EmailService emailService = new EmailService();
+	protected UserDao userDao;
+    protected ATMDao atmDao;
+    protected EmailService emailService;
 
+    public WithdrawServlet() {
+        this(new UserDao(), new ATMDao(), new EmailService());
+    }
+
+    // Constructor for testing
+    public WithdrawServlet(UserDao userDao, ATMDao atmDao, EmailService emailService) {
+        this.userDao = userDao;
+        this.atmDao = atmDao;
+        this.emailService = emailService;
+    }
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         // Validate JWT
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

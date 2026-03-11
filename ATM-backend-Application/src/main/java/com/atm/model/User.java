@@ -10,8 +10,28 @@ public class User {
     private double balance;
     private String phoneNumber;
     private String email;
+    
+    public User() {
+        throw new UnsupportedOperationException("Use parameterized constructor instead");
+    }
+    
+    
+    
+	public User(int id, String username, String pinHash, String role, double balance, String phoneNumber,
+			String email) {
+		super();
+		this.id = id;
+		this.username = username;
+		this.pinHash = pinHash;
+		this.role = role;
+		this.balance = balance;
+		this.phoneNumber = phoneNumber;
+		this.email = email;
+	}
 
-    // Getters and setters
+
+
+	// Getters and setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 

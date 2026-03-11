@@ -1,17 +1,19 @@
 package com.atm.util;
 
-import org.springframework.jdbc.core.JdbcTemplate;
+import java.sql.Connection;
+import java.sql.SQLException;
+import javax.sql.DataSource;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 public class DBUtil {
-    private static JdbcTemplate jdbcTemplate;
+    private static HikariDataSource dataSource;
 
-    static {
-        try {
+    private static synchronized void init() {
+        if (dataSource == null) {
             HikariConfig config = new HikariConfig();
 
-            // Basic DB connection settings
             config.setJdbcUrl(ConfigUtil.get("db.url"));
             config.setUsername(ConfigUtil.get("db.username"));
             config.setPassword(ConfigUtil.get("db.password"));
@@ -32,22 +34,28 @@ public class DBUtil {
                 throw new RuntimeException("Invalid value for db.pool.minIdle: " + minIdleStr, e);
             }
 
-            // Initialize datasource and JdbcTemplate
-            HikariDataSource dataSource = new HikariDataSource(config);
-            jdbcTemplate = new JdbcTemplate(dataSource);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize DBUtil", e);
+            dataSource = new HikariDataSource(config);
         }
     }
 
-    public static JdbcTemplate getJdbcTemplate() {
-        return jdbcTemplate;
+    public static Connection getConnection() throws SQLException {
+        if (dataSource == null) {
+            init();
+        }
+        return dataSource.getConnection();
+    }
+
+    public static DataSource getDataSource() {
+        if (dataSource == null) {
+            init();
+        }
+        return dataSource;
     }
 
     public static void shutdown() {
-        if (jdbcTemplate != null) {
-            ((HikariDataSource) jdbcTemplate.getDataSource()).close();
+        if (dataSource != null) {
+            dataSource.close();
+            dataSource = null;
         }
     }
 }
