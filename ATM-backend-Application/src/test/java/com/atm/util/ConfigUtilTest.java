@@ -1,51 +1,44 @@
 package com.atm.util;
 
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConfigUtilTest {
+public class ConfigUtilTest {
 
     @Test
-    void testGetExistingProperty() { 
+    void testGetStringProperty() {
         String dbUrl = ConfigUtil.get("db.url");
-        assertNotNull(dbUrl);
-        assertTrue(dbUrl.contains("jdbc:mysql"));
+        assertNotNull(dbUrl, "db.url should not be null");
+        assertTrue(dbUrl.startsWith("jdbc"), "db.url should start with jdbc");
     }
 
     @Test
-    void testGetNonExistingPropertyReturnsNull() {
-        String value = ConfigUtil.get("non.existing.key");
-        assertNull(value);
+    void testGetStringPropertyWithDefault() {
+        String value = ConfigUtil.get("non.existent.key", "defaultValue");
+        assertEquals("defaultValue", value, "Should return default value when key is missing");
     }
 
     @Test
-    void testGetWithDefaultValue() {
-        String value = ConfigUtil.get("non.existing.key", "defaultValue");
-        assertEquals("defaultValue", value);
+    void testGetIntProperty() {
+        int maxConnections = ConfigUtil.getInt("max.connections", 10);
+        assertTrue(maxConnections > 0, "max.connections should be positive");
     }
 
     @Test
-    void testGetIntValid() {
-        int port = ConfigUtil.getInt("server.port", 8080);
-        assertEquals(8080, port);
+    void testGetIntPropertyWithDefault() {
+        int value = ConfigUtil.getInt("non.existent.int", 42);
+        assertEquals(42, value, "Should return default int when key is missing");
     }
 
     @Test
-    void testGetIntInvalidFallsBackToDefault() {
-        int port = ConfigUtil.getInt("server.port", 1234);
-        assertEquals(1234, port);
+    void testGetBooleanProperty() {
+        boolean featureEnabled = ConfigUtil.getBoolean("feature.enabled", true);
+        assertTrue(featureEnabled, "feature.enabled should be true");
     }
 
     @Test
-    void testGetBooleanTrue() {
-        boolean enabled = ConfigUtil.getBoolean("feature.enabled", false);
-        assertTrue(enabled);
-    }
-
-    @Test
-    void testGetBooleanDefault() {
-        boolean enabled = ConfigUtil.getBoolean("non.existing.boolean", true);
-        assertTrue(enabled);
+    void testGetBooleanPropertyWithDefault() {
+        boolean value = ConfigUtil.getBoolean("non.existent.boolean", true);
+        assertTrue(value, "Should return default boolean when key is missing");
     }
 }

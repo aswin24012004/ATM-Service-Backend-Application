@@ -13,8 +13,7 @@ import org.slf4j.LoggerFactory;
 @WebServlet("/api/balance")
 public class BalanceServlet extends HttpServlet {
 
-	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(BalanceServlet.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BalanceServlet.class);
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
@@ -34,6 +33,6 @@ public class BalanceServlet extends HttpServlet {
 
         res.setContentType("application/json");
         res.getWriter().println("{\"username\":\"" + username + "\", \"balance\":" + balance + "}");
-        logger.info("Balance check: user={}, balance={}", username, balance);
+        LOGGER.info("Balance check: user={}, balance={}", username, balance);
     }
 }

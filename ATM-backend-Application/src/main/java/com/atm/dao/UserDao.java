@@ -2,42 +2,46 @@ package com.atm.dao;
 
 import com.atm.model.User;
 import com.atm.util.DBUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class UserDao {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserDao.class);
+
+    // Constants for column names
+    private static final String COL_EMAIL = "email";
+    private static final String COL_PHONE = "phone_number";
+    private static final String COL_ROLE = "role";
+    private static final String COL_BALANCE = "balance";
+
     public User findByUsername(String username) {
-        String sql = "SELECT * FROM users WHERE username=?";
         try (Connection conn = DBUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    User user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setUsername(rs.getString("username"));
-                    user.setPinHash(rs.getString("pin_hash"));
-                    user.setRole(rs.getString("role"));
-                    user.setBalance(rs.getDouble("balance"));
-                    try {
-                        user.setPhoneNumber(rs.getString("phone_number"));
-                    } catch (IllegalArgumentException ignored) { }
-                    try {
-                        user.setEmail(rs.getString("email"));
-                    } catch (IllegalArgumentException ignored) { }
-                    return user;
-                }
+             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE username = ?")) {
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new User(
+                    rs.getInt("id"),
+                    username,
+                    rs.getString("pin_hash"),
+                    rs.getString(COL_ROLE),
+                    rs.getDouble(COL_BALANCE),
+                    rs.getString(COL_PHONE),
+                    rs.getString(COL_EMAIL)
+                );
             }
         } catch (SQLException e) {
-            // swallow or log
+            throw new RuntimeException("Error finding user by username: " + username, e);
         }
         return null;
     }
@@ -49,10 +53,11 @@ public class UserDao {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("role");
+                    return rs.getString(COL_ROLE);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Error fetching role for user {}: {}", username, e.getMessage(), e);
         }
         return null;
     }
@@ -64,10 +69,11 @@ public class UserDao {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("email");
+                    return rs.getString(COL_EMAIL);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Error fetching email for user {}: {}", username, e.getMessage(), e);
         }
         return null;
     }
@@ -79,10 +85,11 @@ public class UserDao {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getDouble("balance");
+                    return rs.getDouble(COL_BALANCE);
                 }
             }
         } catch (SQLException e) {
+            logger.error("Error fetching balance for user {}: {}", username, e.getMessage(), e);
         }
         return 0.0;
     }
@@ -94,7 +101,9 @@ public class UserDao {
             ps.setDouble(1, balance);
             ps.setString(2, username);
             ps.executeUpdate();
+            logger.info("Updated balance for user {} to {}", username, balance);
         } catch (SQLException e) {
+            logger.error("Error updating balance for user {}: {}", username, e.getMessage(), e);
         }
     }
 
@@ -106,7 +115,9 @@ public class UserDao {
             ps.setString(2, type);
             ps.setDouble(3, amount);
             ps.executeUpdate();
+            logger.info("Logged transaction for user {}: {} {}", username, type, amount);
         } catch (SQLException e) {
+            logger.error("Error logging transaction for user {}: {}", username, e.getMessage(), e);
         }
     }
 
@@ -121,8 +132,10 @@ public class UserDao {
             ps.setString(5, phone);
             ps.setString(6, email);
             ps.executeUpdate();
+            logger.info("Created user {}", username);
             return true;
         } catch (SQLException e) {
+            logger.error("Error creating user {}: {}", username, e.getMessage(), e);
             return false;
         }
     }
@@ -137,15 +150,15 @@ public class UserDao {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", rs.getInt("id"));
                 map.put("username", rs.getString("username"));
-                map.put("role", rs.getString("role"));
-                map.put("balance", rs.getDouble("balance"));
-                map.put("phone_number", rs.getString("phone_number"));
-                map.put("email", rs.getString("email"));
+                map.put(COL_ROLE, rs.getString(COL_ROLE));
+                map.put(COL_BALANCE, rs.getDouble(COL_BALANCE));
+                map.put(COL_PHONE, rs.getString(COL_PHONE));
+                map.put(COL_EMAIL, rs.getString(COL_EMAIL));
                 result.add(map);
             }
         } catch (SQLException e) {
+            logger.error("Error fetching all users: {}", e.getMessage(), e);
         }
         return result;
     }
 }
-

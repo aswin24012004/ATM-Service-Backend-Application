@@ -18,16 +18,16 @@ import org.slf4j.LoggerFactory;
 public class LoginServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(LoginServlet.class);
-    private final AuthService authService = new AuthService();
-    private final EmailService emailService = new EmailService();
+	private static final Logger LOGGER = LoggerFactory.getLogger(LoginServlet.class);
+    protected  AuthService authService = new AuthService();
+    protected  EmailService emailService = new EmailService();
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String username = req.getParameter("username");
         String pin = req.getParameter("pin");
 
-        logger.info("Login attempt: username={}", username);
+        LOGGER.info("Login attempt: username={}", username);
 
         String token = AuthService.login(username, pin);
 
@@ -41,7 +41,7 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("role", authService.getRole(username));
 
             out.println("{\"status\":\"success\",\"token\":\"" + token + "\"}");
-            logger.info("Login successful: username={}", username);
+            LOGGER.info("Login successful: username={}", username);
 
             // Send welcome email
             try {
@@ -49,13 +49,13 @@ public class LoginServlet extends HttpServlet {
                 emailService.sendEmail(email, "Welcome Back to ATM System",
                     "Dear " + username + ",\nYou have successfully logged in to your ATM account.");
             } catch (Exception e) {
-                logger.error("Failed to send login email to user={}", username, e);
+            	LOGGER.error("Failed to send login email to user={}", username, e);
             }
 
         } else {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             out.println("{\"status\":\"error\",\"message\":\"Invalid credentials\"}");
-            logger.warn("Login failed: username={}", username);
+            LOGGER.warn("Login failed: username={}", username);
         }
     }
 
@@ -63,6 +63,6 @@ public class LoginServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         res.setContentType("application/json");
         res.getWriter().println("{\"status\":\"success\",\"token\":\"test-token\"}");
-        logger.debug("LoginServlet GET called for test token");
+        LOGGER.debug("LoginServlet GET called for test token");
     }
 }

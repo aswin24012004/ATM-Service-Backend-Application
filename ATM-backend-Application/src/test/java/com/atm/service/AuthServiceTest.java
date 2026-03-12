@@ -4,81 +4,64 @@ import com.atm.dao.UserDao;
 import com.atm.model.User;
 import com.atm.util.HashUtil;
 import com.atm.util.TokenUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
+import org.junit.jupiter.api.*;
+import org.mockito.MockedStatic;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
-
+import static org.mockito.Mockito.*;
 class AuthServiceTest {
-
-    @Mock
-    private UserDao userDao;
-
-    @InjectMocks
-    private AuthService authService;
-
+    private UserDao userDaoMock;
+    private User testUser;
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        userDaoMock = mock(UserDao.class);
+        testUser = new User(1, "aswin", "hashedPin", "USER", 100.0, null, null);
+        testUser.setPhoneNumber("9876543210");
+        testUser.setEmail("aswin@example.com");
+        try {
+        	java.lang.reflect.Field field = AuthService.class.getDeclaredField("userDao");
+            field.setAccessible(true);
+            field.set(null, userDaoMock);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
-
     @Test
-    void loginShouldReturnTokenWhenCredentialsAreValid() {
-        User user = new User();
-        user.setUsername("admin");
-        user.setRole("ADMIN");
-        user.setPinHash(HashUtil.hashPassword("1234"));
-
-        when(userDao.findByUsername("admin")).thenReturn(user);
-
-        String token = AuthService.login("admin", "1234");
-
-        assertNotNull(token, "Token should not be null for valid login");
-        assertTrue(token.contains("admin"), "Token should contain username");
+    void testLoginSuccess() {
+        when(userDaoMock.findByUsername("aswin")).thenReturn(testUser);
+        try (MockedStatic<HashUtil> hashMock = mockStatic(HashUtil.class);
+             MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
+            hashMock.when(() -> HashUtil.checkPassword("1234", "hashedPin")).thenReturn(true);
+            tokenMock.when(() -> TokenUtil.generateToken("aswin", "USER")).thenReturn("mockToken");
+            String token = AuthService.login("aswin", "1234");
+            assertNotNull(token);
+            assertEquals("mockToken", token);
+        }
     }
-
     @Test
-    void loginShouldReturnNullWhenUserNotFound() {
-        when(userDao.findByUsername("ghost")).thenReturn(null);
-
+    void testLoginFailureWrongPassword() {
+        when(userDaoMock.findByUsername("aswin")).thenReturn(testUser);
+        try (MockedStatic<HashUtil> hashMock = mockStatic(HashUtil.class)) {
+            hashMock.when(() -> HashUtil.checkPassword("wrong", "hashedPin")).thenReturn(false);
+            String token = AuthService.login("aswin", "wrong");
+            assertNull(token);
+        }
+    }
+    @Test
+    void testLoginFailureNoUser() {
+        when(userDaoMock.findByUsername("ghost")).thenReturn(null);
         String token = AuthService.login("ghost", "1234");
-
-        assertNull(token, "Token should be null for invalid user");
+        assertNull(token);
     }
-
     @Test
-    void loginShouldReturnNullWhenPasswordInvalid() {
-        User user = new User();
-        user.setUsername("admin");
-        user.setRole("ADMIN");
-        user.setPinHash(HashUtil.hashPassword("1234"));
-
-        when(userDao.findByUsername("admin")).thenReturn(user);
-
-        String token = AuthService.login("admin", "wrongpin");
-
-        assertNull(token, "Token should be null for invalid password");
+    void testGetRoleDelegatesToDao() {
+        when(userDaoMock.getRole("aswin")).thenReturn("ADMIN");
+        AuthService authService = new AuthService();
+        assertEquals("ADMIN", authService.getRole("aswin"));
     }
-
     @Test
-    void getRoleShouldReturnUserRole() {
-        when(userDao.getRole("admin")).thenReturn("ADMIN");
-
-        String role = authService.getRole("admin");
-
-        assertEquals("ADMIN", role);
-    }
-
-    @Test
-    void getEmailShouldReturnUserEmail() {
-        when(userDao.getEmail("admin")).thenReturn("admin@example.com");
-
-        String email = authService.getEmail("admin");
-
-        assertEquals("admin@example.com", email);
+    void testGetEmailDelegatesToDao() {
+        when(userDaoMock.getEmail("aswin")).thenReturn("aswin.c201@gmail.com");
+        AuthService authService = new AuthService();
+        assertEquals("aswin.c201@gmail.com", authService.getEmail("aswin"));
     }
 }

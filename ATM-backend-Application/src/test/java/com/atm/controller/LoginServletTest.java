@@ -23,35 +23,39 @@ class LoginServletTest {
     private HttpSession session;
     private StringWriter responseWriter;
 
+    private AuthService authService;
+    private EmailService emailService;
+
     @BeforeEach
     void setUp() throws Exception {
-        servlet = new LoginServlet();
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
         session = mock(HttpSession.class);
         responseWriter = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+
+        authService = mock(AuthService.class);
+        emailService = mock(EmailService.class);
+
+        servlet = new LoginServlet() {
+            {
+                this.authService = authService;
+                this.emailService = emailService;
+            }
+        };
     }
 
     @Test
     void testDoPostSuccessfulLogin() throws Exception {
-        when(request.getParameter("username")).thenReturn("admin1");
-        when(request.getParameter("pin")).thenReturn("12341");
+        when(request.getParameter("username")).thenReturn("admin");
+        when(request.getParameter("pin")).thenReturn("1234");
         when(request.getSession(true)).thenReturn(session);
 
         try (MockedStatic<AuthService> authMock = mockStatic(AuthService.class)) {
             authMock.when(() -> AuthService.login("admin", "1234")).thenReturn("fakeToken");
 
-            AuthService authService = mock(AuthService.class);
-            when(authService.getRole("aswin")).thenReturn("user");
-            when(authService.getEmail("aswin")).thenReturn("aswin.c2401@gmail.com");
-
-            servlet = new LoginServlet() {
-                { 
-                    this.authService = mock(AuthService.class); 
-                    this.emailService = mock(EmailService.class); 
-                }
-            };
+            when(authService.getRole("admin")).thenReturn("ADMIN");
+            when(authService.getEmail("admin")).thenReturn("aswin.c2401@gmail.com");
 
             servlet.doPost(request, response);
 
@@ -61,14 +65,13 @@ class LoginServletTest {
         }
     }
 
-
     @Test
     void testDoPostInvalidLogin() throws Exception {
         when(request.getParameter("username")).thenReturn("admin");
-        when(request.getParameter("pin")).thenReturn("1234");
+        when(request.getParameter("pin")).thenReturn("12");
 
         try (MockedStatic<AuthService> authMock = mockStatic(AuthService.class)) {
-            authMock.when(() -> AuthService.login("admin", "wrong")).thenReturn(null);
+            authMock.when(() -> AuthService.login("admin", "12")).thenReturn(null);
 
             servlet.doPost(request, response);
 

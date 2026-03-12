@@ -19,8 +19,7 @@ import org.slf4j.LoggerFactory;
 public class DepositServlet extends HttpServlet {
 
     
-	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(DepositServlet.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(DepositServlet.class);
     protected EmailService emailService;
 
     public DepositServlet() {
@@ -38,7 +37,7 @@ public class DepositServlet extends HttpServlet {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Missing or invalid Authorization header\"}");
-            logger.warn("Deposit attempt denied: missing/invalid auth header");
+            LOGGER.warn("Deposit attempt denied: missing/invalid auth header");
             return;
         }
 
@@ -46,7 +45,7 @@ public class DepositServlet extends HttpServlet {
         if (!TokenUtil.validateToken(token)) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Invalid token\"}");
-            logger.warn("Deposit attempt denied: invalid token");
+            LOGGER.warn("Deposit attempt denied: invalid token");
             return;
         }
 
@@ -88,7 +87,7 @@ public class DepositServlet extends HttpServlet {
             PrintWriter out = res.getWriter();
             if (newBalance != null) {
                 out.println("{\"status\":\"success\",\"newBalance\":" + newBalance + "}");
-                logger.info("Deposit successful: user={}, amount={}, newBalance={}", username, amount, newBalance);
+                LOGGER.info("Deposit successful: user={}, amount={}, newBalance={}", username, amount, newBalance);
 
                 // Send transaction email
                 try (PreparedStatement ps = conn.prepareStatement(
@@ -103,15 +102,15 @@ public class DepositServlet extends HttpServlet {
                         }
                     }
                 } catch (Exception e) {
-                    logger.error("Failed to send deposit email to user={}", username, e);
+                	LOGGER.error("Failed to send deposit email to user={}", username, e);
                 }
             } else {
                 res.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 res.getWriter().println("{\"error\":\"User not found\"}");
-                logger.warn("Deposit failed: user={} not found", username);
+                LOGGER.warn("Deposit failed: user={} not found", username);
             }
         } catch (Exception e) {
-            logger.error("Error processing deposit for user={}", username, e);
+        	LOGGER.error("Error processing deposit for user={}", username, e);
             res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             res.getWriter().println("{\"error\":\"Server error during deposit\"}");
         }

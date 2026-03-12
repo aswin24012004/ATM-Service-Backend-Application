@@ -5,7 +5,6 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
-import java.util.Map;
 
 import com.atm.dao.TransactionDao;
 import com.atm.util.TokenUtil;
@@ -17,18 +16,26 @@ import org.slf4j.LoggerFactory;
 @WebServlet("/api/transactions")
 public class TransactionServlet extends HttpServlet {
 
-	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(TransactionServlet.class);
-	protected TransactionDao txDao = new TransactionDao();
+    private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionServlet.class);
+
+    protected TransactionDao txDao;
+
+    public TransactionServlet() {
+        this.txDao = new TransactionDao();
+    }
+
+    public TransactionServlet(TransactionDao txDao) {
+        this.txDao = txDao;
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        // Validate JWT
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Missing or invalid Authorization header\"}");
-            logger.warn("Transaction fetch denied: missing/invalid auth header");
+            LOGGER.warn("Transaction fetch denied: missing/invalid auth header");
             return;
         }
 
@@ -36,7 +43,7 @@ public class TransactionServlet extends HttpServlet {
         if (!TokenUtil.validateToken(token)) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().println("{\"error\":\"Invalid token\"}");
-            logger.warn("Transaction fetch denied: invalid token");
+            LOGGER.warn("Transaction fetch denied: invalid token");
             return;
         }
 
@@ -45,13 +52,12 @@ public class TransactionServlet extends HttpServlet {
         String role = (String) claims.get("role");
 
         List<?> transactions;
-
         if ("ADMIN".equals(role)) {
             transactions = txDao.findAll();
-            logger.info("Admin retrieved all transactions");
+            LOGGER.info("Admin retrieved all transactions");
         } else {
             transactions = txDao.findByUsername(username);
-            logger.info("User {} retrieved their transactions", username);
+            LOGGER.info("User {} retrieved their transactions", username);
         }
 
         res.setContentType("application/json");

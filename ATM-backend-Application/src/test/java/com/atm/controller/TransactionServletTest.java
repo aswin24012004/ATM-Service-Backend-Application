@@ -1,6 +1,8 @@
 package com.atm.controller;
 
 import com.atm.dao.TransactionDao;
+import com.atm.model.ATM;
+import com.atm.model.User;
 import com.atm.util.TokenUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,14 +20,12 @@ import static org.mockito.Mockito.*;
 
 class TransactionServletTest {
 
-    private TransactionServlet servlet;
     private HttpServletRequest request;
     private HttpServletResponse response;
     private StringWriter responseWriter;
 
     @BeforeEach
     void setUp() throws Exception {
-        servlet = new TransactionServlet();
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
         responseWriter = new StringWriter();
@@ -36,6 +36,7 @@ class TransactionServletTest {
     void testDoGetMissingAuthHeader() throws Exception {
         when(request.getHeader("Authorization")).thenReturn(null);
 
+        TransactionServlet servlet = new TransactionServlet(new TransactionDao());
         servlet.doGet(request, response);
 
         String output = responseWriter.toString();
@@ -49,6 +50,7 @@ class TransactionServletTest {
         try (MockedStatic<TokenUtil> tokenMock = mockStatic(TokenUtil.class)) {
             tokenMock.when(() -> TokenUtil.validateToken("badToken")).thenReturn(false);
 
+            TransactionServlet servlet = new TransactionServlet(new TransactionDao());
             servlet.doGet(request, response);
 
             String output = responseWriter.toString();
@@ -71,11 +73,12 @@ class TransactionServletTest {
             tokenMock.when(() -> TokenUtil.validateToken("goodToken")).thenReturn(true);
             tokenMock.when(() -> TokenUtil.getClaims("goodToken")).thenReturn(claims);
 
-            servlet = new TransactionServlet() { { this.txDao = txDao; } };
+            TransactionServlet servlet = new TransactionServlet(txDao);
             servlet.doGet(request, response);
 
-            String output = responseWriter.toString();
-            assertTrue(output.contains("[]")); // empty list JSON
+            String output = responseWriter.toString().trim();
+            assertTrue(output.contains("[]"));
+            verify(txDao).findAll();
         }
     }
 
@@ -94,11 +97,12 @@ class TransactionServletTest {
             tokenMock.when(() -> TokenUtil.validateToken("userToken")).thenReturn(true);
             tokenMock.when(() -> TokenUtil.getClaims("userToken")).thenReturn(claims);
 
-            servlet = new TransactionServlet() { { this.txDao = txDao; } };
+            TransactionServlet servlet = new TransactionServlet(txDao);
             servlet.doGet(request, response);
 
-            String output = responseWriter.toString();
+            String output = responseWriter.toString().trim();
             assertTrue(output.contains("[]"));
+            verify(txDao).findByUsername("alice");
         }
     }
 }

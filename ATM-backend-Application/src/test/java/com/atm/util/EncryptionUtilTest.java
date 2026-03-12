@@ -1,42 +1,42 @@
 package com.atm.util;
-
-import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.*;
+import org.mockito.MockedStatic;
 import static org.junit.jupiter.api.Assertions.*;
-
+import static org.mockito.Mockito.*;
 class EncryptionUtilTest {
-
+    private MockedStatic<ConfigUtil> configMock;
+    @BeforeEach
+    void setUp() {
+        configMock = mockStatic(ConfigUtil.class);
+        configMock.when(() -> ConfigUtil.get("SECRET"))
+                  .thenReturn("12345678901234567890123456789012"); // 32 chars
+    }
+    @AfterEach
+    void tearDown() {
+        configMock.close();
+    }
     @Test
     void testEncryptAndDecrypt() throws Exception {
-        String original = "sensitivedata007";
-
-//         Encrypt
+        String original = "SensitiveData123";
         String encrypted = EncryptionUtil.encrypt(original);
-        assertNotNull(encrypted, "Encrypted string should not be null");
-        assertNotEquals(original, encrypted, "Ciphertext should differ from plaintext");
-
-//         Decrypt
+        assertNotNull(encrypted);
+        assertNotEquals(original, encrypted);
         String decrypted = EncryptionUtil.decrypt(encrypted);
-        assertEquals(original, decrypted, "Decrypted text should match original");
+        assertEquals(original, decrypted);
     }
-
     @Test
     void testDifferentInputsProduceDifferentCiphertext() throws Exception {
-        String data1 = "HelloWorld";
-        String data2 = "NewString";
-
-        String encrypted_data1 = EncryptionUtil.encrypt(data1);
-        String encrypted_data2 = EncryptionUtil.encrypt(data2);
-
-        assertNotEquals(encrypted_data1, encrypted_data2, "Different inputs should produce different ciphertext");
+        String encrypted1 = EncryptionUtil.encrypt("HelloWorld");
+        String encrypted2 = EncryptionUtil.encrypt("NewString");
+        assertNotEquals(encrypted1, encrypted2);
     }
-
     @Test
     void testDecryptInvalidCiphertextThrowsException() {
-        String invalidCiphertext = "NotBase64OrAES";
-
-        assertThrows(Exception.class, () -> {
-            EncryptionUtil.decrypt(invalidCiphertext);
-        }, "Decrypting invalid ciphertext should throw an exception");
+        assertThrows(Exception.class, () -> EncryptionUtil.decrypt("NotBase64OrAES"));
+    }
+    @Test
+    void testKeyLengthValidation() {
+        configMock.when(() -> ConfigUtil.get("SECRET")).thenReturn("shortkey");
+        assertThrows(IllegalArgumentException.class, () -> EncryptionUtil.encrypt("data"));
     }
 }

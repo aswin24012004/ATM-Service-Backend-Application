@@ -1,42 +1,49 @@
 package com.atm.util;
 
 import io.jsonwebtoken.Claims;
-import org.junit.jupiter.api.Test;
+import io.jsonwebtoken.security.Keys;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class TokenUtilTest {
+    private MockedStatic<ConfigUtil> configMock;
+    
+    @BeforeEach
+    void setUp() {
+        configMock = mockStatic(ConfigUtil.class);
+        configMock.when(() -> ConfigUtil.get("SECRET"))
+                  .thenReturn("12345678901234567890123456789012");
+        configMock.when(() -> ConfigUtil.get("EXPIRATION_MS"))
+                  .thenReturn("3600000");
+    }
 
+
+    @AfterEach
+    void tearDown() {
+        configMock.close();
+    }
     @Test
     void testGenerateAndValidateToken() {
-        String username = "alice";
-        String role = "CUSTOMER";
-
-        String token = TokenUtil.generateToken(username, role);
-        assertNotNull(token);
-
-        boolean isValid = TokenUtil.validateToken(token);
-        assertTrue(isValid);
-
+        String token = TokenUtil.generateToken("aswin", "USER");
+        assertTrue(TokenUtil.validateToken(token));
         Claims claims = TokenUtil.getClaims(token);
-        assertEquals(username, claims.getSubject());
-        assertEquals(role, claims.get("role"));
+        assertEquals("aswin", claims.getSubject());
+        assertEquals("USER", claims.get("role"));
     }
-
     @Test
     void testInvalidTokenFailsValidation() {
-        String invalidToken = "this.is.not.a.valid.token";
-        boolean isValid = TokenUtil.validateToken(invalidToken);
-        assertFalse(isValid);
+        assertFalse(TokenUtil.validateToken("not.a.real.token"));
     }
-
     @Test
-    void testExpiredTokenFailsValidation() throws InterruptedException {
+    void testTokenExpiration() throws InterruptedException {
+        configMock.when(() -> ConfigUtil.get("EXPIRATION_MS")).thenReturn("1"); // 1 ms
         String token = TokenUtil.generateToken("admin", "ADMIN");
-
-        Thread.sleep(2000);
-
-        boolean isValid = TokenUtil.validateToken(token);
-        assertFalse(isValid);
+        Thread.sleep(5);
+        assertFalse(TokenUtil.validateToken(token));
     }
 }
